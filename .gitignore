@@ -1,0 +1,33 @@
+node_modules/
+.env
+.env.*
+*.env
+*.env.*
+!.env.example
+!*.env.example
+dist/
+.DS_Store
+*.log
+*.err.log
+*.out.log
+.sixth/
+*.private.json
+*.private.js
+
+# Backend ignores
+backend/node_modules/
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/*.private.json
+
+# Frontend ignores
+frontend/node_modules/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Exclude Portfolio
+Portfolio/
+portfolio/
+portfo/
