@@ -25,7 +25,9 @@ export const ADMIN_MEMBER_IDS = [
 export const ADMIN_NAMES = [
   'lữ võ hoàng phúc',
   'hoàng phúc',
-  'lu vo hoang phuc'
+  'lu vo hoang phuc',
+  'phuc lu',
+  'phúc lữ'
 ];
 
 /** Maximum reputation score — always ranks first. */

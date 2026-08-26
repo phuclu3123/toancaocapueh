@@ -21,7 +21,9 @@ import {
   Building2,
   UserCheck,
   ExternalLink,
-  Settings
+  Settings,
+  Camera,
+  Edit3
 } from 'lucide-react';
 import { getInitials } from '../utils/userInitials';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,9 +31,11 @@ import { useCommunity } from '../contexts/CommunityContext';
 import { getTierProgress, getTierByPoints, SPECIALTY_BADGES, BADGE_CATEGORIES } from '../services/reputationService';
 import { communityService } from '../services/communityService';
 import { isAdminIdentity, getAdminBadgeIds } from '../services/adminService';
+import { apiFetch, readApiJson } from '../utils/apiClient';
 import UserRankBadge from '../components/community/UserRankBadge';
 import PostCard from '../components/community/PostCard';
 import CreatePostModal from '../components/community/CreatePostModal';
+import AvatarCropModal from '../components/modals/AvatarCropModal';
 import EmptyState from '../components/ui/EmptyState';
 import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import '../assets/styles/community.css';
@@ -111,6 +115,7 @@ export default function CommunityProfilePage({ defaultTab = 'posts' }) {
   const [savedPosts, setSavedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showAvatarCropModal, setShowAvatarCropModal] = useState(false);
 
   const handlePostSubmit = async (data) => {
     if (editingPost) {
@@ -131,6 +136,40 @@ export default function CommunityProfilePage({ defaultTab = 'posts' }) {
     navigator.clipboard?.writeText(window.location.href);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleSaveCroppedAvatar = async (croppedBase64) => {
+    try {
+      let localUser = null;
+      try {
+        const raw = localStorage.getItem('ueh_tcc_user');
+        if (raw) localUser = JSON.parse(raw);
+      } catch {}
+      const authUser = currentUser || localUser;
+      const username = authUser?.username || authUser?.email;
+
+      await readApiJson(await apiFetch('/api/auth/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          avatar: croppedBase64
+        })
+      }));
+
+      const stored = localStorage.getItem('ueh_tcc_user');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          localStorage.setItem('ueh_tcc_user', JSON.stringify({ ...parsed, avatar: croppedBase64, photoURL: croppedBase64 }));
+        } catch {}
+      }
+
+      setProfile(prev => ({ ...prev, avatar: croppedBase64 }));
+      window.dispatchEvent(new Event('ueh-tcc-session-changed'));
+    } catch (err) {
+      console.error('Chưa thể lưu ảnh đại diện:', err);
+    }
   };
 
   useEffect(() => {
@@ -156,24 +195,17 @@ export default function CommunityProfilePage({ defaultTab = 'posts' }) {
 
         const authUser = currentUser || localUser;
 
-        if (isAdminIdentity(merged) || isMe) {
-          if (authUser && (isAdminIdentity(authUser) || isMe)) {
+        if (isMe || (authUser && (authUser.id === targetId || authUser.username === targetId || (isAdminIdentity(merged) && isAdminIdentity(authUser))))) {
+          if (authUser) {
             merged.name = authUser.displayName || authUser.name || merged.name;
             if (authUser.photoURL || authUser.avatar) {
               merged.avatar = authUser.photoURL || authUser.avatar;
             }
             merged.cohort = authUser.cohort || merged.cohort;
             merged.email = authUser.email || merged.email;
-          }
-        }
-
-        if (isMe && authUser) {
-          merged.name = authUser.displayName || authUser.name || merged.name;
-          merged.avatar = authUser.photoURL || authUser.avatar || merged.avatar;
-          merged.cohort = authUser.cohort || merged.cohort;
-          merged.email = authUser.email || merged.email;
-          if (!isAdminIdentity(merged)) {
-            merged.points = Math.max(merged.points || 0, reputationPoints || 0);
+            if (authUser.bio) merged.bio = authUser.bio;
+            if (authUser.school) merged.school = authUser.school;
+            if (authUser.phoneNumber) merged.phoneNumber = authUser.phoneNumber;
           }
         }
 
@@ -196,7 +228,11 @@ export default function CommunityProfilePage({ defaultTab = 'posts' }) {
     }
 
     load();
-    return () => { cancelled = true; };
+    window.addEventListener('ueh-tcc-session-changed', load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('ueh-tcc-session-changed', load);
+    };
   }, [targetId, isMe, savedPostIds, currentUser, reputationPoints]);
 
   const points = profile?.points || 0;
@@ -265,6 +301,16 @@ export default function CommunityProfilePage({ defaultTab = 'posts' }) {
                     </span>
                   )}
                 </div>
+                {isMe && (
+                  <button
+                    type="button"
+                    className="qa-profile-camera-btn"
+                    onClick={() => setShowAvatarCropModal(true)}
+                    title="Đổi ảnh đại diện"
+                  >
+                    <Camera size={13} />
+                  </button>
+                )}
                 {profile?.isAdmin && (
                   <span className="qa-profile-crown-badge" title="Quản trị viên & Cố vấn Trưởng">
                     <Crown size={12} />
@@ -287,9 +333,9 @@ export default function CommunityProfilePage({ defaultTab = 'posts' }) {
                 </div>
 
                 <p className="qa-profile-bio-text">
-                  {profile?.isAdmin
+                  {profile?.bio || (profile?.isAdmin
                     ? 'Người sáng lập và quản trị nền tảng UEH TCC — biên soạn tài liệu, kiểm duyệt lời giải và đồng hành cùng sinh viên trong từng bài toán.'
-                    : 'Thành viên cộng đồng Toán Cao Cấp UEH — cùng thảo luận kiến thức, chia sẻ lời giải và học tập giải tích & đại số.'}
+                    : 'Thành viên cộng đồng Toán Cao Cấp UEH — cùng thảo luận kiến thức, chia sẻ lời giải và học tập giải tích & đại số.')}
                 </p>
               </div>
 
@@ -297,13 +343,22 @@ export default function CommunityProfilePage({ defaultTab = 'posts' }) {
               <div className="qa-profile-affil-footer">
                 <div className="qa-affil-item">
                   <Building2 size={13} className="qa-affil-icon" />
-                  <span>Đại học Kinh tế TP.HCM (UEH)</span>
+                  <span>{profile?.school || 'Đại học Kinh tế TP.HCM (UEH)'}</span>
                 </div>
                 <div className="qa-affil-item">
                   <UserCheck size={13} className="qa-affil-icon" />
                   <span>{profile?.isAdmin ? 'Ban Cố vấn Học thuật TCC' : 'Thành viên Cộng đồng'}</span>
                 </div>
               </div>
+
+              {isMe && (
+                <div className="qa-profile-edit-row">
+                  <Link to="/account?tab=profile" className="qa-profile-edit-info-btn">
+                    <Edit3 size={13} />
+                    <span>Sửa thông tin hồ sơ</span>
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Achievements & Statistics Card */}
@@ -587,6 +642,14 @@ export default function CommunityProfilePage({ defaultTab = 'posts' }) {
         editingPost={editingPost}
         currentUser={currentUser}
       />
+
+      {isMe && (
+        <AvatarCropModal
+          isOpen={showAvatarCropModal}
+          onClose={() => setShowAvatarCropModal(false)}
+          onSave={handleSaveCroppedAvatar}
+        />
+      )}
     </div>
   );
 }
