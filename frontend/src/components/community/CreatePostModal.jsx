@@ -41,16 +41,16 @@ export default function CreatePostModal({
   const [content, setContent] = useState('');
   const [subject, setSubject] = useState('algebra');
   const [difficulty, setDifficulty] = useState('medium');
+  const [tags, setTags] = useState(['#ToanCaoCap']);
   const [tagInput, setTagInput] = useState('');
-  const [tags, setTags] = useState([]);
+  const [images, setImages] = useState([]);
   const [image, setImage] = useState(null);
   const [altText, setAltText] = useState('');
-
-  const [activeMobileTab, setActiveMobileTab] = useState('editor'); // 'editor' | 'preview'
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [activeMobileTab, setActiveMobileTab] = useState('editor');
   const [hasDraftLoaded, setHasDraftLoaded] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   const textareaRef = useRef(null);
 
@@ -196,14 +196,27 @@ export default function CreatePostModal({
 
     setIsSubmitting(true);
     try {
+      let finalContent = content.trim();
+      if (images && images.length > 0) {
+        const uninserted = images.filter((img) => !finalContent.includes(img.preview || img.url));
+        if (uninserted.length > 0) {
+          finalContent += uninserted
+            .map(
+              (img) =>
+                `<p><img src="${img.preview || img.url}" alt="${img.altText || 'Ảnh đề bài'}" class="wysiwyg-math-inline-img" style="max-width: 100%; max-height: 480px; height: auto; border-radius: 10px; margin: 12px 0; border: 1px solid #cbd5e1; box-shadow: 0 4px 14px rgba(0,0,0,0.07); display: block;" /></p>`
+            )
+            .join('');
+        }
+      }
+
       await onSubmit({
         type,
         title: title.trim(),
-        content: content.trim(),
+        content: finalContent,
         subject,
         difficulty,
         tags,
-        image,
+        image: images[0]?.preview || images[0]?.url || image || null,
         altText
       });
 
@@ -400,19 +413,18 @@ export default function CreatePostModal({
 
             {/* 5. Image Uploader */}
             <div className="form-group">
-              <label className="form-label">Ảnh đính kèm đề bài (Tùy chọn):</label>
+              <label className="form-label">Ảnh đính kèm đề bài / sơ đồ (Tối đa 8 ảnh, hoặc dán <b>Ctrl+V</b>):</label>
               <ImageUploader
-                images={image ? [{
-                  id: 'post-attachment',
-                  url: typeof image === 'string' ? image : image.url,
-                  preview: typeof image === 'string' ? image : (image.preview || image.url),
-                  altText: altText || image.altText || ''
-                }] : []}
-                maxImages={1}
+                images={images}
+                maxImages={8}
                 onChange={(nextImages) => {
-                  const nextImage = nextImages[0];
-                  setImage(nextImage?.preview || nextImage?.url || null);
-                  setAltText(nextImage?.altText || '');
+                  setImages(nextImages);
+                  setImage(nextImages[0]?.preview || nextImages[0]?.url || null);
+                  setAltText(nextImages[0]?.altText || '');
+                }}
+                onInsertToEditor={(imgSrc, imgAlt) => {
+                  const imgTag = `<p><img src="${imgSrc}" alt="${imgAlt || 'Ảnh đề bài'}" class="wysiwyg-math-inline-img" style="max-width: 100%; max-height: 480px; height: auto; border-radius: 10px; margin: 12px 0; border: 1px solid #cbd5e1; box-shadow: 0 4px 14px rgba(0,0,0,0.07); display: block;" /></p><p><br></p>`;
+                  setContent((prev) => (prev ? `${prev}${imgTag}` : imgTag));
                 }}
               />
             </div>

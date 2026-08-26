@@ -6,7 +6,7 @@
     "name": "Lữ Võ Hoàng Phúc",
     "role": "Admin",
     "phoneNumber": "0901234567",
-    "avatar": "/images/tccvang.jpg",
+    "avatar": "",
     "school": "UEH",
     "bio": "Quản trị viên hệ thống Toán Cao Cấp UEH"
   },
@@ -17,7 +17,7 @@
     "name": "Lữ Võ Hoàng Phúc",
     "role": "Admin",
     "phoneNumber": "0901234567",
-    "avatar": "/images/tccvang.jpg",
+    "avatar": "",
     "school": "UEH",
     "bio": "Quản trị viên hệ thống Toán Cao Cấp UEH"
   },
@@ -27,6 +27,6 @@
     "password": "adminPassword123!",
     "name": "Quản trị viên UEH",
     "role": "Admin",
-    "avatar": "/images/tccvang.jpg"
+    "avatar": ""
   }
 ]

@@ -931,10 +931,14 @@ export default function Navbar() {
                     aria-expanded={showUserDropdown}
                   >
                     <div className="user-avatar-circle">
-                      {loggedInUser.avatar ? (
-                        <img src={loggedInUser.avatar} alt={loggedInUser.name} />
+                      {(loggedInUser.avatar || loggedInUser.photoURL) ? (
+                        <img
+                          src={loggedInUser.avatar || loggedInUser.photoURL}
+                          alt={loggedInUser.name}
+                          style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                        />
                       ) : (
-                        <span>{loggedInUser.name ? loggedInUser.name.charAt(0).toUpperCase() : 'U'}</span>
+                        <span>{(loggedInUser.name || loggedInUser.username || 'U').trim().charAt(0).toUpperCase()}</span>
                       )}
                     </div>
                     <span className="user-profile-name-text">{loggedInUser.name}</span>
@@ -945,7 +949,15 @@ export default function Navbar() {
                     <div className="user-dropdown-card" role="menu">
                       <div className="user-dropdown-header">
                         <div className="dropdown-avatar-circle">
-                          {loggedInUser.name ? loggedInUser.name.charAt(0).toUpperCase() : 'U'}
+                          {(loggedInUser.avatar || loggedInUser.photoURL) ? (
+                            <img
+                              src={loggedInUser.avatar || loggedInUser.photoURL}
+                              alt={loggedInUser.name}
+                              style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <span>{(loggedInUser.name || loggedInUser.username || 'U').trim().charAt(0).toUpperCase()}</span>
+                          )}
                         </div>
                         <div className="dropdown-user-info">
                           <span className="dropdown-user-name">{loggedInUser.name}</span>

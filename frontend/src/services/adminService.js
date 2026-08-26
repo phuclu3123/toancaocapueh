@@ -61,11 +61,26 @@ export function isAdminIdentity(identity) {
 export function applyAdminIdentity(member) {
   if (!member || !isAdminIdentity(member)) return member;
 
+  let savedAvatar = member.avatar;
+  if (savedAvatar === '/images/tccvang.jpg') savedAvatar = '';
+  try {
+    const raw = localStorage.getItem('ueh_tcc_user');
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u && (u.avatar || u.photoURL)) {
+        if (isAdminIdentity(u) || member.email === u.username || member.email === u.email) {
+          savedAvatar = u.avatar || u.photoURL;
+        }
+      }
+    }
+  } catch {}
+
   return {
     ...member,
     isAdmin: true,
     isInstructor: true,
-    points: ADMIN_POINTS
+    avatar: savedAvatar || '',
+    points: member.points || ADMIN_POINTS
   };
 }
 

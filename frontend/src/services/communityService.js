@@ -97,8 +97,8 @@ const AUTH_ADMIN = {
   id: 'user-phuc',
   name: 'Lữ Võ Hoàng Phúc',
   email: 'luphuc321@gmail.com',
-  cohort: 'K50 UEH',
-  avatar: '/images/tccvang.jpg',
+  cohort: 'K50 UEH · Quản trị viên',
+  avatar: '',
   points: 9999,
   isAdmin: true,
   isInstructor: true
@@ -108,8 +108,8 @@ const AUTH_USER_519 = {
   id: 'user-phuc-519',
   name: 'Lữ Võ Hoàng Phúc',
   email: 'luphuc519@gmail.com',
-  cohort: 'K50 UEH',
-  avatar: '/images/tccvang.jpg',
+  cohort: 'K50 UEH · Biên soạn đề',
+  avatar: '',
   points: 3450,
   isAdmin: true,
   isInstructor: true
@@ -119,8 +119,8 @@ const AUTH_USER_0809 = {
   id: 'user-phuc-0809',
   name: 'Hoàng Phúc',
   email: 'luphuc08092006@gmail.com',
-  cohort: 'K50 UEH',
-  avatar: '/images/tccvang.jpg',
+  cohort: 'K50 UEH · Thủ khoa giải đề',
+  avatar: '',
   points: 2180,
   isAdmin: false,
   isInstructor: true
@@ -1326,8 +1326,8 @@ class CommunityService {
         matchedUser = {
           id: 'user-phuc',
           name: 'Lữ Võ Hoàng Phúc',
-          cohort: 'K50 UEH',
-          avatar: '/images/tccvang.jpg',
+          cohort: 'K50 UEH · Quản trị viên',
+          avatar: '',
           points: 9999,
           isAdmin: true,
           isInstructor: true

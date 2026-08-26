@@ -1,0 +1,331 @@
+/* ==========================================================================
+   AVATAR CROP MODAL (Apple & Facebook Standard Circular Cropper)
+   ========================================================================== */
+
+.avatar-crop-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(15, 23, 42, 0.72) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 999999 !important;
+  padding: 16px !important;
+  box-sizing: border-box;
+  animation: avatarOverlayIn 0.2s ease;
+}
+
+@keyframes avatarOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.avatar-crop-modal-card {
+  background: #ffffff;
+  width: 95%;
+  max-width: 480px;
+  max-height: 90vh;
+  border-radius: 20px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: avatarCardIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+@keyframes avatarCardIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.avatar-crop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+}
+
+.avatar-crop-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-crop-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #176b4a;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(23, 107, 74, 0.25);
+}
+
+.avatar-crop-title h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.avatar-crop-title p {
+  margin: 2px 0 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.avatar-crop-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.avatar-crop-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.avatar-crop-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+}
+
+.avatar-crop-viewport-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 18px;
+}
+
+.avatar-crop-canvas-container {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #0f172a;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 0 0 4px #ffffff, 0 0 0 6px #176b4a;
+}
+
+.avatar-crop-canvas-container.is-dragging {
+  cursor: grabbing;
+}
+
+.avatar-crop-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.avatar-crop-circle-mask {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 2px dashed rgba(255, 255, 255, 0.65);
+}
+
+.avatar-crop-drag-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.75);
+  color: #ffffff;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+.avatar-crop-controls {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 12px;
+  background: #ffffff;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+}
+
+.avatar-crop-zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar-crop-tool-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.avatar-crop-tool-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.avatar-crop-tool-btn.is-rotate {
+  width: auto;
+  padding: 0 10px;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.avatar-crop-slider {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #e2e8f0;
+  accent-color: #176b4a;
+  cursor: pointer;
+}
+
+.avatar-crop-file-row {
+  display: flex;
+  justify-content: center;
+}
+
+.avatar-crop-change-file-btn {
+  background: transparent;
+  border: none;
+  color: #176b4a;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.avatar-crop-change-file-btn:hover {
+  background: #f0fdf4;
+}
+
+/* Upload empty state */
+.avatar-crop-upload-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 36px 20px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  background: #ffffff;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.avatar-crop-upload-empty:hover {
+  border-color: #176b4a;
+  background: #f0fdf4;
+}
+
+.avatar-crop-upload-icon-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #e6f4ea;
+  color: #176b4a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.avatar-crop-upload-empty h4 {
+  margin: 0 0 6px 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.avatar-crop-upload-empty p {
+  margin: 0 0 16px 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.avatar-crop-browse-btn {
+  pointer-events: none;
+  font-size: 0.85rem;
+}
+
+.avatar-crop-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid #f1f5f9;
+  background: #ffffff;
+}
+
+.avatar-crop-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #176b4a !important;
+  border-color: #176b4a !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 9px;
+}

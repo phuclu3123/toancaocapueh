@@ -146,18 +146,42 @@ export default function CommunityProfilePage({ defaultTab = 'posts' }) {
 
         // The signed-in owner keeps their auth identity on top of forum data
         const merged = { ...resolved };
-        if (isMe && currentUser) {
-          merged.name = currentUser.displayName || currentUser.name || merged.name;
-          merged.avatar = currentUser.photoURL || currentUser.avatar || merged.avatar;
-          merged.cohort = currentUser.cohort || merged.cohort;
-          merged.email = currentUser.email || merged.email;
+
+        let localUser = null;
+        try {
+          const raw = localStorage.getItem('ueh_tcc_user');
+          if (raw) localUser = JSON.parse(raw);
+        } catch {}
+
+        const authUser = currentUser || localUser;
+
+        if (isAdminIdentity(merged) || isMe) {
+          if (authUser && (isAdminIdentity(authUser) || isMe)) {
+            merged.name = authUser.displayName || authUser.name || merged.name;
+            if (authUser.photoURL || authUser.avatar) {
+              merged.avatar = authUser.photoURL || authUser.avatar;
+            }
+            merged.cohort = authUser.cohort || merged.cohort;
+            merged.email = authUser.email || merged.email;
+          }
+        }
+
+        if (isMe && authUser) {
+          merged.name = authUser.displayName || authUser.name || merged.name;
+          merged.avatar = authUser.photoURL || authUser.avatar || merged.avatar;
+          merged.cohort = authUser.cohort || merged.cohort;
+          merged.email = authUser.email || merged.email;
           if (!isAdminIdentity(merged)) {
             merged.points = Math.max(merged.points || 0, reputationPoints || 0);
           }
         }
+
         if (isAdminIdentity(merged)) {
           merged.isAdmin = true;
           merged.points = 9999;
+          if (merged.avatar === '/images/tccvang.jpg') {
+            merged.avatar = authUser?.avatar || authUser?.photoURL || '';
+          }
         }
 
         setProfile(merged);

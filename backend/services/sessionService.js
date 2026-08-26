@@ -1,8 +1,15 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
 import Session from '../models/Session.js';
 import User from '../models/User.js';
 import { roleForIdentifier } from '../utils/roles.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const USERS_FILE_PATH = path.join(__dirname, '../data/users.json');
 
 export const SESSION_COOKIE_NAME = 'ueh_tcc_session';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -39,21 +46,64 @@ export const publicUser = (user) => ({
   id: user.id || user._id?.toString(),
   uid: user.uid || null,
   username: user.username,
-  email: user.username,
+  email: user.username || user.email,
   name: user.name,
-  role: roleForIdentifier(user.username),
+  role: roleForIdentifier(user.username || user.email),
   phoneNumber: user.phoneNumber || '',
-  avatar: user.avatar || '',
+  avatar: user.avatar || user.photoURL || '',
+  photoURL: user.avatar || user.photoURL || '',
   school: user.school || '',
   bio: user.bio || ''
 });
+
+export const updateMemorySessionUser = (username, updatedUser) => {
+  const pub = publicUser(updatedUser);
+  for (const [tokenHash, sess] of MEMORY_SESSIONS.entries()) {
+    if (
+      sess.username?.toLowerCase() === username?.toLowerCase() ||
+      sess.userId === updatedUser.id ||
+      sess.userId === updatedUser._id?.toString()
+    ) {
+      MEMORY_SESSIONS.set(tokenHash, { ...sess, user: pub });
+    }
+  }
+};
+
+const getFreshUser = async (identifier) => {
+  if (!identifier) return null;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const user = await User.findOne({
+        $or: [
+          { id: identifier },
+          { username: new RegExp(`^${identifier}$`, 'i') },
+          { email: new RegExp(`^${identifier}$`, 'i') }
+        ]
+      }).lean();
+      if (user) return publicUser(user);
+    } catch {}
+  }
+  try {
+    if (fs.existsSync(USERS_FILE_PATH)) {
+      const list = JSON.parse(fs.readFileSync(USERS_FILE_PATH, 'utf-8'));
+      const found = list.find(
+        (u) =>
+          (u.id && u.id.toLowerCase() === identifier.toLowerCase()) ||
+          (u.username && u.username.toLowerCase() === identifier.toLowerCase()) ||
+          (u.email && u.email.toLowerCase() === identifier.toLowerCase())
+      );
+      if (found) return publicUser(found);
+    }
+  } catch {}
+  return null;
+};
 
 export const issueSession = async (res, user) => {
   const token = crypto.randomBytes(32).toString('base64url');
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
   const userId = user.id || user._id?.toString();
-  const username = user.username;
+  const username = user.username || user.email;
 
   if (!userId || !username) {
     throw new Error('Cannot issue a session without a stable user identity');
@@ -87,6 +137,11 @@ export const resolveSessionUser = async (req) => {
   // Check memory session first
   const memSession = MEMORY_SESSIONS.get(tokenHash);
   if (memSession && new Date() < memSession.expiresAt) {
+    const fresh = await getFreshUser(memSession.username || memSession.userId);
+    if (fresh) {
+      MEMORY_SESSIONS.set(tokenHash, { ...memSession, user: fresh });
+      return fresh;
+    }
     return memSession.user;
   }
 
@@ -98,14 +153,10 @@ export const resolveSessionUser = async (req) => {
       }).lean();
 
       if (session) {
-        const user = await User.findOne({
-          $or: [{ id: session.userId }, { username: session.username }]
-        }).lean();
-
-        if (user) {
-          const pub = publicUser(user);
-          MEMORY_SESSIONS.set(tokenHash, { ...session, user: pub });
-          return pub;
+        const fresh = await getFreshUser(session.username || session.userId);
+        if (fresh) {
+          MEMORY_SESSIONS.set(tokenHash, { ...session, user: fresh });
+          return fresh;
         }
       }
     } catch {}

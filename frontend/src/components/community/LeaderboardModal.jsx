@@ -18,10 +18,38 @@ const PODIUM_META = [
 ];
 
 function Avatar({ member, className = '' }) {
-  if (member?.avatar) {
+  if (member?.avatar && member.avatar !== '/images/tccvang.jpg' && member.avatar !== '/tccvang.jpg') {
     return <img src={member.avatar} alt={member.name} className={className} />;
   }
-  return <span className={className}>{(member?.name || 'U').charAt(0).toUpperCase()}</span>;
+  const initials = (member?.name || 'U')
+    .trim()
+    .split(/\s+/)
+    .slice(-2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+  const isAdmin = Boolean(member?.isAdmin || member?.role === 'Admin');
+
+  return (
+    <span
+      className={`${className} qa-avatar-initials`}
+      style={{
+        background: isAdmin
+          ? 'linear-gradient(135deg, #176b4a 0%, #d97706 100%)'
+          : `hsl(${(((member?.name || 'U').charCodeAt(0) * 47) % 360)}, 65%, 45%)`,
+        color: '#ffffff',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: 800,
+        fontSize: '0.85em',
+        borderRadius: '50%',
+        boxShadow: isAdmin ? '0 0 0 2px #d97706, 0 4px 12px rgba(217, 119, 6, 0.35)' : 'none'
+      }}
+    >
+      {initials}
+    </span>
+  );
 }
 
 /**

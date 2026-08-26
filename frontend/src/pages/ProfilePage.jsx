@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   BookOpen,
+  Camera,
   CheckCircle2,
   CreditCard,
   GraduationCap,
@@ -11,6 +12,7 @@ import {
   ShieldCheck,
   User
 } from 'lucide-react';
+import AvatarCropModal from '../components/modals/AvatarCropModal';
 import { coursesData } from '../data/coursesData';
 import { apiFetch, readApiJson, toClientUser } from '../utils/apiClient';
 import {
@@ -43,6 +45,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [enrollments, setEnrollments] = useState([]);
   const [sessionLoading, setSessionLoading] = useState(true);
+  const [showAvatarCropModal, setShowAvatarCropModal] = useState(false);
 
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -151,6 +154,41 @@ export default function ProfilePage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveCroppedAvatar = async (croppedBase64) => {
+    try {
+      const payload = await readApiJson(await apiFetch('/api/auth/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: user.username || user.email,
+          avatar: croppedBase64
+        })
+      }));
+
+      const updatedUser = toClientUser({
+        ...user,
+        ...(payload.user || {}),
+        avatar: croppedBase64,
+        photoURL: croppedBase64
+      });
+      setUser(updatedUser);
+
+      // Update local storage session
+      const stored = localStorage.getItem('ueh_tcc_user');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          localStorage.setItem('ueh_tcc_user', JSON.stringify({ ...parsed, avatar: croppedBase64 }));
+        } catch {}
+      }
+
+      window.dispatchEvent(new Event('ueh-tcc-session-changed'));
+      setStatusMsg({ type: 'success', text: 'Ảnh đại diện đã được cập nhật thành công!' });
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: err.message || 'Chưa thể lưu ảnh đại diện.' });
     }
   };
 
@@ -275,10 +313,20 @@ export default function ProfilePage() {
         </header>
 
         <section className="profile-identity" aria-label="Tài khoản hiện tại">
-          <div className="profile-avatar" aria-hidden="true">
-            {avatarUrl
-              ? <img src={avatarUrl} alt="" />
-              : <span>{getInitials(user.name || identity)}</span>}
+          <div className="profile-avatar-wrap">
+            <div className="profile-avatar" aria-hidden="true">
+              {avatarUrl
+                ? <img src={avatarUrl} alt="" />
+                : <span>{getInitials(user.name || identity)}</span>}
+            </div>
+            <button
+              type="button"
+              className="profile-avatar-edit-btn"
+              onClick={() => setShowAvatarCropModal(true)}
+              title="Căn chỉnh & đổi ảnh đại diện (Chuẩn Apple / Facebook)"
+            >
+              <Camera size={14} />
+            </button>
           </div>
           <div className="profile-identity-copy">
             <strong>{user.name || 'Học viên UEH TCC'}</strong>
@@ -465,6 +513,13 @@ export default function ProfilePage() {
           </section>
         )}
       </div>
+
+      <AvatarCropModal
+        isOpen={showAvatarCropModal}
+        onClose={() => setShowAvatarCropModal(false)}
+        onSave={handleSaveCroppedAvatar}
+        initialImage={avatarUrl}
+      />
     </main>
   );
 }

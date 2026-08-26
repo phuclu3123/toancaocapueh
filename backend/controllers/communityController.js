@@ -7,8 +7,8 @@ const AUTH_ADMIN = {
   id: 'user-phuc',
   name: 'Lữ Võ Hoàng Phúc',
   email: 'luphuc321@gmail.com',
-  cohort: 'K50 UEH',
-  avatar: '/images/tccvang.jpg',
+  cohort: 'K50 UEH · Quản trị viên',
+  avatar: '',
   points: 9999,
   isAdmin: true,
   isInstructor: true
@@ -18,8 +18,8 @@ const AUTH_USER_519 = {
   id: 'user-phuc-519',
   name: 'Lữ Võ Hoàng Phúc',
   email: 'luphuc519@gmail.com',
-  cohort: 'K50 UEH',
-  avatar: '/images/tccvang.jpg',
+  cohort: 'K50 UEH · Biên soạn đề',
+  avatar: '',
   points: 3450,
   isAdmin: true,
   isInstructor: true
@@ -29,8 +29,8 @@ const AUTH_USER_0809 = {
   id: 'user-phuc-0809',
   name: 'Hoàng Phúc',
   email: 'luphuc08092006@gmail.com',
-  cohort: 'K50 UEH',
-  avatar: '/images/tccvang.jpg',
+  cohort: 'K50 UEH · Thủ khoa giải đề',
+  avatar: '',
   points: 2180,
   isAdmin: false,
   isInstructor: true
@@ -1158,9 +1158,33 @@ export const deleteComment = async (req, res) => {
  */
 export const getLeaderboard = async (req, res) => {
   try {
+    let list = [...LEADERBOARD_CONTRIBUTORS];
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const dbUsers = await User.find({}).lean();
+        if (dbUsers && dbUsers.length > 0) {
+          list = list.map(item => {
+            const matched = dbUsers.find(u => 
+              (u.username && u.username.toLowerCase() === item.email?.toLowerCase()) ||
+              (u.id && u.id === item.id)
+            );
+            if (matched) {
+              return {
+                ...item,
+                name: matched.name || item.name,
+                avatar: matched.avatar || item.avatar || '',
+                cohort: matched.school || item.cohort,
+                isAdmin: Boolean(matched.role === 'Admin' || item.isAdmin)
+              };
+            }
+            return item;
+          });
+        }
+      } catch {}
+    }
     res.json({
       success: true,
-      leaderboard: LEADERBOARD_CONTRIBUTORS
+      leaderboard: list
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

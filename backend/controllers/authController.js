@@ -5,7 +5,7 @@ import User from '../models/User.js';
 import { sendOtpEmail } from '../services/emailService.js';
 import { hashPassword, verifyPassword } from '../utils/passwordHelper.js';
 import { listActiveEnrollments } from '../services/enrollmentService.js';
-import { issueSession } from '../services/sessionService.js';
+import { issueSession, updateMemorySessionUser, publicUser } from '../services/sessionService.js';
 
 const LOCAL_USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
 
@@ -386,7 +386,7 @@ export const updateProfile = async (req, res) => {
   }
 
   try {
-    const user = await findUser({ username: new RegExp(`^${username}$`, 'i') });
+    let user = await findUser({ username: new RegExp(`^${username}$`, 'i') });
     if (!user) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
     }
@@ -399,16 +399,28 @@ export const updateProfile = async (req, res) => {
       try { await user.save(); } catch {}
     }
     const localUsers = getLocalUsers();
-    const idx = localUsers.findIndex(u => u.username?.toLowerCase() === username.toLowerCase());
+    const idx = localUsers.findIndex(
+      (u) =>
+        u.username?.toLowerCase() === username.toLowerCase() ||
+        (user.id && u.id === user.id) ||
+        (user._id && u.id === user._id.toString())
+    );
     if (idx !== -1) {
       localUsers[idx] = { ...localUsers[idx], ...user };
       saveLocalUsers(localUsers);
+    } else {
+      localUsers.push(user);
+      saveLocalUsers(localUsers);
     }
+
+    updateMemorySessionUser(username, user);
+
+    const safeUser = publicUser(user);
 
     return res.json({
       success: true,
       message: 'Cập nhật thông tin cá nhân thành công!',
-      user
+      user: safeUser
     });
   } catch (error) {
     console.error("Lỗi cập nhật profile:", error);

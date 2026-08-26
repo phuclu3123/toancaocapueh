@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Upload,
   Link as LinkIcon,
@@ -6,19 +6,22 @@ import {
   Image as ImageIcon,
   Plus,
   AlertCircle,
-  Check
+  Check,
+  CornerDownRight
 } from 'lucide-react';
 import '../../assets/styles/community.css';
 
 /**
  * ImageUploader component for handwritten problem snapshots, exam papers, or diagrams.
- * Supports File upload (drag & drop / file picker) and Image URL pasting.
- * Zero emojis, 100% Lucide SVG.
+ * Supports File upload (drag & drop / file picker / Ctrl+V paste) and Image URL pasting.
+ * Supports up to 8 geometry/diagram images with preview and inline insertion.
  */
 export default function ImageUploader({
   images = [],
   onChange,
-  maxImages = 3,
+  onImagesChange,
+  onInsertToEditor,
+  maxImages = 8,
   className = ''
 }) {
   const [isUploading, setIsUploading] = useState(false);
@@ -28,6 +31,11 @@ export default function ImageUploader({
   const [errorMessage, setErrorMessage] = useState('');
 
   const fileInputRef = useRef(null);
+
+  const triggerChange = (nextImages) => {
+    onChange?.(nextImages);
+    onImagesChange?.(nextImages);
+  };
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
@@ -52,8 +60,8 @@ export default function ImageUploader({
         return;
       }
 
-      if (file.size > 5 * 1024 * 1024) {
-        setErrorMessage('Kích thước ảnh tối đa là 5MB.');
+      if (file.size > 10 * 1024 * 1024) {
+        setErrorMessage('Kích thước ảnh tối đa là 10MB.');
         setIsUploading(false);
         return;
       }
@@ -72,17 +80,42 @@ export default function ImageUploader({
         setUploadProgress(Math.round((processed / files.length) * 100));
 
         if (processed === files.length) {
-          setTimeout(() => {
-            onChange([...images, ...newImages]);
-            setIsUploading(false);
-            setUploadProgress(0);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-          }, 300);
+          triggerChange([...images, ...newImages]);
+          setIsUploading(false);
+          setUploadProgress(0);
+          if (fileInputRef.current) fileInputRef.current.value = '';
         }
       };
 
       reader.readAsDataURL(file);
     });
+  };
+
+  const handlePasteInZone = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type && item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (uploadEvent) => {
+            const newImg = {
+              id: `img-paste-${Date.now()}`,
+              url: uploadEvent.target.result,
+              preview: uploadEvent.target.result,
+              altText: 'Ảnh dán từ clipboard'
+            };
+            triggerChange([...images, newImg]);
+          };
+          reader.readAsDataURL(file);
+        }
+        return;
+      }
+    }
   };
 
   const handleAddUrl = () => {
@@ -108,40 +141,60 @@ export default function ImageUploader({
       altText: 'Ảnh đính kèm'
     };
 
-    onChange([...images, newImg]);
+    triggerChange([...images, newImg]);
     setTempUrl('');
     setShowUrlInput(false);
   };
 
   const handleRemoveImage = (imgId) => {
-    onChange(images.filter((img) => img.id !== imgId));
+    triggerChange(images.filter((img) => img.id !== imgId));
     setErrorMessage('');
   };
 
   return (
-    <div className={`image-uploader-component ${className}`}>
+    <div
+      className={`image-uploader-component ${className}`}
+      onPaste={handlePasteInZone}
+      tabIndex={0}
+      style={{ outline: 'none' }}
+    >
       {/* Upload Zone */}
       {images.length > 0 ? (
         <div className="images-preview-grid">
           {images.map((img, idx) => (
             <div key={img.id || idx} className="image-preview-card">
-              <img src={img.preview || img.url} alt={img.altText || `Ảnh ${idx + 1}`} className="image-preview-thumb" />
+              <img
+                src={img.preview || img.url}
+                alt={img.altText || `Ảnh ${idx + 1}`}
+                className="image-preview-thumb"
+              />
               <div className="image-preview-overlay">
+                {onInsertToEditor && (
+                  <button
+                    type="button"
+                    className="image-insert-editor-btn"
+                    onClick={() => onInsertToEditor(img.preview || img.url, img.altText)}
+                    title="Chèn ảnh này vào vị trí con trỏ trong lời giải"
+                  >
+                    <CornerDownRight size={13} />
+                    <span>Chèn</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="image-delete-btn"
                   onClick={() => handleRemoveImage(img.id)}
                   title="Xóa ảnh này"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={13} />
                 </button>
               </div>
             </div>
           ))}
 
           {images.length < maxImages && (
-            <label className="image-add-more-card" title="Thêm ảnh khác">
-              <Plus size={20} />
+            <label className="image-add-more-card" title="Thêm ảnh khác (Hoặc bấm Ctrl+V)">
+              <Plus size={18} />
               <span>Thêm ảnh ({images.length}/{maxImages})</span>
               <input
                 ref={fileInputRef}
@@ -167,15 +220,18 @@ export default function ImageUploader({
             <>
               <div className="image-upload-prompt">
                 <ImageIcon size={26} className="image-upload-icon" />
-                <p className="image-upload-text">Đính kèm ảnh bài tập, đề thi hoặc sơ đồ hình vẽ (nếu có)</p>
+                <p className="image-upload-text">
+                  Đính kèm ảnh bài tập, đề thi hoặc sơ đồ hình vẽ (Có thể chọn nhiều ảnh hoặc bấm <b>Ctrl+V</b> để dán)
+                </p>
 
                 <div className="image-upload-buttons">
                   <label className="btn btn-secondary btn-sm image-file-btn">
                     <Upload size={14} />
-                    <span>Chọn ảnh từ máy</span>
+                    <span>Chọn ảnh từ máy (Tối đa 8 ảnh)</span>
                     <input
                       type="file"
                       accept="image/*"
+                      multiple
                       style={{ display: 'none' }}
                       onChange={handleFileChange}
                     />

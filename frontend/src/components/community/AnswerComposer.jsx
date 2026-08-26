@@ -42,6 +42,11 @@ export default function AnswerComposer({
     setContent((prev) => prev ? `${prev}<br><br>${template}` : template);
   };
 
+  const handleInsertImageToEditor = (imgSrc, altText = 'Ảnh bài giải') => {
+    const imgTag = `<p><img src="${imgSrc}" alt="${altText}" class="wysiwyg-math-inline-img" style="max-width: 100%; max-height: 480px; height: auto; border-radius: 10px; margin: 12px 0; border: 1px solid #cbd5e1; box-shadow: 0 4px 14px rgba(0,0,0,0.07); display: block;" /></p><p><br></p>`;
+    setContent((prev) => (prev ? `${prev}${imgTag}` : imgTag));
+  };
+
   const handleFormSubmit = async (event) => {
     event.preventDefault();
     if (!currentUser) {
@@ -49,7 +54,7 @@ export default function AnswerComposer({
       return;
     }
     const cleanContent = content.replace(/<[^>]*>/g, '').trim();
-    if (!cleanContent && !content.includes('$') && images.length === 0) {
+    if (!cleanContent && !content.includes('$') && !content.includes('<img') && images.length === 0) {
       setError('Hãy nhập nội dung lời giải hoặc đính kèm ảnh bài giải.');
       return;
     }
@@ -58,10 +63,19 @@ export default function AnswerComposer({
     setIsSubmitting(true);
     try {
       let finalContent = content.trim();
+      // If there are attached images that haven't been inserted inline yet, append them
       if (images.length) {
-        finalContent += images
-          .map((image) => `<br><br><img src="${image.preview || image.url}" alt="${image.altText || 'Ảnh bài giải'}" class="detail-attached-img" />`)
-          .join('');
+        const uninsertedImages = images.filter(
+          (img) => !finalContent.includes(img.preview || img.url)
+        );
+        if (uninsertedImages.length) {
+          finalContent += uninsertedImages
+            .map(
+              (image) =>
+                `<p><img src="${image.preview || image.url}" alt="${image.altText || 'Ảnh bài giải'}" class="wysiwyg-math-inline-img" style="max-width: 100%; max-height: 480px; height: auto; border-radius: 10px; margin: 12px 0; border: 1px solid #cbd5e1; box-shadow: 0 4px 14px rgba(0,0,0,0.07); display: block;" /></p>`
+            )
+            .join('');
+        }
       }
       await onSubmit(finalContent);
       setContent('');
@@ -123,7 +137,7 @@ export default function AnswerComposer({
         <WYSIWYGMathEditor
           value={content}
           onChange={setContent}
-          placeholder="Nhập lời giải hoặc phân tích bài toán (soạn thảo in đậm B, nghiêng I, gạch chân U, đổi màu sắc, chèn KaTeX trực quan như Google Docs)..."
+          placeholder="Nhập lời giải hoặc phân tích bài toán (soạn thảo in đậm B, nghiêng I, gạch chân U, đổi màu sắc, chèn KaTeX, chèn ảnh bài giải hoặc bấm Ctrl+V để dán trực tiếp)..."
           onOpenCheatsheet={onOpenCheatsheet}
           minHeight="220px"
         />
@@ -133,7 +147,13 @@ export default function AnswerComposer({
         {/* Image upload toggle */}
         {showImages && (
           <div className="se-image-uploader-section">
-            <ImageUploader images={images} onImagesChange={setImages} />
+            <ImageUploader
+              images={images}
+              onChange={setImages}
+              onImagesChange={setImages}
+              onInsertToEditor={handleInsertImageToEditor}
+              maxImages={8}
+            />
           </div>
         )}
 

@@ -20,7 +20,8 @@ import {
   Eye,
   EyeOff,
   Smile,
-  Layers
+  Layers,
+  Image as ImageIcon
 } from 'lucide-react';
 import MathRenderer from '../MathRenderer';
 import FacebookEmojiPicker from './FacebookEmojiPicker';
@@ -48,25 +49,25 @@ const HIGHLIGHT_COLORS = [
 ];
 
 const FONT_SIZES = [
-  { label: 'Nhỏ (9pt)', size: '1', pt: 9 },
-  { label: 'Vừa (10pt)', size: '2', pt: 10 },
-  { label: 'Chuẩn (11pt)', size: '3', pt: 11 },
-  { label: 'Lớn (14pt)', size: '4', pt: 14 },
-  { label: 'Tiêu đề (18pt)', size: '5', pt: 18 },
-  { label: 'Tiêu đề lớn (24pt)', size: '6', pt: 24 }
+  { label: '8pt (Rất nhỏ)', pt: 8, size: '1' },
+  { label: '10pt (Nhỏ)', pt: 10, size: '2' },
+  { label: '11pt (Tiêu chuẩn UEH)', pt: 11, size: '3' },
+  { label: '14pt (Đề mục vừa)', pt: 14, size: '4' },
+  { label: '18pt (Tiêu đề lớn)', pt: 18, size: '5' },
+  { label: '24pt (Tiêu đề rất lớn)', pt: 24, size: '6' }
 ];
 
 // Prioritized commonly used KaTeX math symbols
 const COMMON_MATH_BUTTONS = [
-  { label: '\\dfrac{a}{b}', code: '\\dfrac{a}{b}', title: 'Phân số lớn \\dfrac{a}{b}' },
-  { label: 'x²', code: 'x^2', title: 'Lũy thừa x^2' },
-  { label: '√x', code: '\\sqrt{x}', title: 'Căn bậc hai \\sqrt{x}' },
-  { label: 'lim', code: '\\lim_{x \\to x_0} f(x)', title: 'Giới hạn lim' },
-  { label: '∫', code: '\\int_{a}^{b} f(x)\\,dx', title: 'Tích phân \\int' },
-  { label: '∑', code: '\\sum_{i=1}^{n} x_i', title: 'Tổng Sigma \\sum' },
-  { label: '[Ma trận]', code: '\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}', title: 'Ma trận pmatrix' },
-  { label: '≥ / ≤', code: 'a \\ge b', title: 'Bất đẳng thức \\ge hoặc \\le' },
-  { label: '→', code: '\\to', title: 'Tiến tới / Suy ra \\to' },
+  { label: '\\dfrac{a}{b}', code: '\\dfrac{a}{b}', title: 'Phân số đẹp' },
+  { label: 'x²', code: 'x^{2}', title: 'Số mũ / Lũy thừa' },
+  { label: '√x', code: '\\sqrt{x}', title: 'Căn bậc hai' },
+  { label: 'lim', code: '\\lim_{x \\to x_0}', title: 'Giới hạn' },
+  { label: '∫', code: '\\int_{a}^{b} f(x) dx', title: 'Tích phân' },
+  { label: '∑', code: '\\sum_{i=1}^{n}', title: 'Tổng sigma' },
+  { label: '[Ma trận]', code: '\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}', title: 'Ma trận vuông' },
+  { label: '≥ / ≤', code: '\\ge', title: 'Bất đẳng thức' },
+  { label: '→', code: '\\to', title: 'Mũi tên suy ra / tiến tới' },
   { label: 'f(x,y)', code: 'f(x, y)', title: 'Hàm số 2 biến' }
 ];
 
@@ -84,6 +85,7 @@ export default function WYSIWYGMathEditor({
   showLivePreview = true
 }) {
   const editorRef = useRef(null);
+  const imageInputRef = useRef(null);
   const isInternalChange = useRef(false);
   const savedSelectionRange = useRef(null);
 
@@ -162,32 +164,7 @@ export default function WYSIWYGMathEditor({
     exec('fontSize', closest.size);
   };
 
-  const insertMathSnippet = (latex) => {
-    editorRef.current?.focus();
-    const snippet = ` $${latex}$ `;
-    document.execCommand('insertText', false, snippet);
-    handleInput();
-  };
-
-  const insertDisplayMath = () => {
-    editorRef.current?.focus();
-    const snippet = `\n$$f(x) = \\dfrac{a}{b}$$\n`;
-    document.execCommand('insertText', false, snippet);
-    handleInput();
-  };
-
-  const insertEmoji = (emoji, iso = null) => {
-    editorRef.current?.focus();
-    if (iso) {
-      const flagHtml = `<img src="https://flagcdn.com/w40/${iso}.png" alt="${emoji}" class="inline-flag-emoji" contenteditable="false" />&nbsp;`;
-      document.execCommand('insertHTML', false, flagHtml);
-    } else {
-      document.execCommand('insertText', false, emoji);
-    }
-    handleInput();
-  };
-
-  const insertCalloutBoxHtml = (htmlSnippet) => {
+  const insertHtmlAtCursor = (htmlSnippet) => {
     if (!editorRef.current) return;
     editorRef.current.focus();
 
@@ -236,6 +213,76 @@ export default function WYSIWYGMathEditor({
     isInternalChange.current = true;
     const finalHtml = editorRef.current.innerHTML.replace(/&nbsp;/gi, ' ');
     onChange?.(finalHtml);
+  };
+
+  const insertMathSnippet = (latex) => {
+    editorRef.current?.focus();
+    const snippet = ` $${latex}$ `;
+    document.execCommand('insertText', false, snippet);
+    handleInput();
+  };
+
+  const insertDisplayMath = () => {
+    editorRef.current?.focus();
+    const snippet = `\n$$f(x) = \\dfrac{a}{b}$$\n`;
+    document.execCommand('insertText', false, snippet);
+    handleInput();
+  };
+
+  const insertEmoji = (emoji, iso = null) => {
+    editorRef.current?.focus();
+    if (iso) {
+      const flagHtml = `<img src="https://flagcdn.com/w40/${iso}.png" alt="${emoji}" class="inline-flag-emoji" contenteditable="false" />&nbsp;`;
+      document.execCommand('insertHTML', false, flagHtml);
+    } else {
+      document.execCommand('insertText', false, emoji);
+    }
+    handleInput();
+  };
+
+  const insertCalloutBoxHtml = (htmlSnippet) => {
+    insertHtmlAtCursor(htmlSnippet);
+  };
+
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type && item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (uploadEvent) => {
+            const base64 = uploadEvent.target.result;
+            const imgHtml = `<p><img src="${base64}" alt="Ảnh bài giải đính kèm" class="wysiwyg-math-inline-img" style="max-width: 100%; max-height: 480px; height: auto; border-radius: 10px; margin: 12px 0; border: 1px solid #cbd5e1; box-shadow: 0 4px 14px rgba(0,0,0,0.07); display: block;" /></p><p><br></p>`;
+            insertHtmlAtCursor(imgHtml);
+          };
+          reader.readAsDataURL(file);
+        }
+        return;
+      }
+    }
+  };
+
+  const handleImageFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    files.forEach((file) => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        const base64 = loadEvent.target.result;
+        const imgHtml = `<p><img src="${base64}" alt="${file.name || 'Ảnh hình học đính kèm'}" class="wysiwyg-math-inline-img" style="max-width: 100%; max-height: 480px; height: auto; border-radius: 10px; margin: 12px 0; border: 1px solid #cbd5e1; box-shadow: 0 4px 14px rgba(0,0,0,0.07); display: block;" /></p><p><br></p>`;
+        insertHtmlAtCursor(imgHtml);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (imageInputRef.current) imageInputRef.current.value = '';
   };
 
   const handleKeyDown = (e) => {
@@ -553,6 +600,26 @@ export default function WYSIWYGMathEditor({
             >
               <Layers size={14} />
             </button>
+
+            <button
+              type="button"
+              className="docs-tool-btn docs-image-btn"
+              onClick={() => {
+                saveSelection();
+                imageInputRef.current?.click();
+              }}
+              title="Chèn ảnh / hình vẽ vào văn bản (Hoặc bấm Ctrl+V để dán trực tiếp)"
+            >
+              <ImageIcon size={14} />
+            </button>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageFileChange}
+              style={{ display: 'none' }}
+            />
           </div>
 
           {/* Preview Toggle Button */}
@@ -630,6 +697,7 @@ export default function WYSIWYGMathEditor({
         style={{ minHeight }}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         onBlur={saveSelection}
         onKeyUp={saveSelection}
         onMouseUp={saveSelection}
