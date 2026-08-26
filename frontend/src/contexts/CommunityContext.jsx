@@ -153,30 +153,77 @@ export function CommunityProvider({ children }) {
     return communityService.reportContent(data);
   }, []);
 
-  // Upvote Post
-  const handleUpvotePost = useCallback(async (postId) => {
+  // Vote Post (Up / Down)
+  const handleVotePost = useCallback(async (postId, voteType = 'up') => {
     const userId = currentUser?.uid || currentUser?.id || 'guest';
-    const result = await communityService.toggleUpvotePost(postId, userId);
+    const result = await communityService.votePost(postId, userId, voteType);
 
     setPosts(prev => prev.map(p => {
       if (p.id === postId) {
         return {
           ...p,
           upvotes: result.upvotes,
-          upvotedBy: result.hasUpvoted
-            ? [...(p.upvotedBy || []), userId]
-            : (p.upvotedBy || []).filter(id => id !== userId)
+          upvotedBy: result.upvotedBy,
+          downvotedBy: result.downvotedBy
         };
       }
       return p;
     }));
 
-    if (result.hasUpvoted && currentUser) {
+    if (result.userVote === 1 && currentUser) {
       addReputationPoints(REPUTATION_POINTS.UPVOTE_QUESTION_RECEIVED);
     }
 
     return result;
   }, [currentUser, addReputationPoints]);
+
+  const handleUpvotePost = useCallback(async (postId) => {
+    return handleVotePost(postId, 'up');
+  }, [handleVotePost]);
+
+  const handleDownvotePost = useCallback(async (postId) => {
+    return handleVotePost(postId, 'down');
+  }, [handleVotePost]);
+
+  // Vote Answer (Up / Down)
+  const handleVoteAnswer = useCallback(async (postId, answerId, voteType = 'up') => {
+    const userId = currentUser?.uid || currentUser?.id || 'guest';
+    const result = await communityService.voteAnswer(postId, answerId, userId, voteType);
+
+    setPosts(prev => prev.map(p => {
+      if (p.id === postId) {
+        return {
+          ...p,
+          answers: (p.answers || []).map(a => {
+            if (a.id === answerId) {
+              return {
+                ...a,
+                upvotes: result.upvotes,
+                upvotedBy: result.upvotedBy,
+                downvotedBy: result.downvotedBy
+              };
+            }
+            return a;
+          })
+        };
+      }
+      return p;
+    }));
+
+    if (result.userVote === 1 && currentUser) {
+      addReputationPoints(REPUTATION_POINTS.UPVOTE_ANSWER_RECEIVED);
+    }
+
+    return result;
+  }, [currentUser, addReputationPoints]);
+
+  const handleUpvoteAnswer = useCallback(async (postId, answerId) => {
+    return handleVoteAnswer(postId, answerId, 'up');
+  }, [handleVoteAnswer]);
+
+  const handleDownvoteAnswer = useCallback(async (postId, answerId) => {
+    return handleVoteAnswer(postId, answerId, 'down');
+  }, [handleVoteAnswer]);
 
   // Create Post
   const handleCreatePost = useCallback(async (postData) => {
@@ -307,7 +354,12 @@ export function CommunityProvider({ children }) {
     reportPost,
 
     // Actions
+    handleVotePost,
     handleUpvotePost,
+    handleDownvotePost,
+    handleVoteAnswer,
+    handleUpvoteAnswer,
+    handleDownvoteAnswer,
     handleCreatePost,
     handleUpdatePost,
     handleDeletePost,

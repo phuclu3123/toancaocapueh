@@ -62,7 +62,12 @@ export default function CommunityDetailPage() {
   const {
     savedPostIds,
     toggleSavePost,
+    handleVotePost,
     handleUpvotePost,
+    handleDownvotePost,
+    handleVoteAnswer,
+    handleUpvoteAnswer,
+    handleDownvoteAnswer,
     handleDeletePost,
     handleUpdatePost,
     handleAddAnswer,
@@ -164,6 +169,11 @@ export default function CommunityDetailPage() {
     )
   );
 
+  const currentUserId = currentUser?.uid || currentUser?.id || 'guest';
+  const isUpvoted = Boolean(post?.upvotedBy && post.upvotedBy.includes(currentUserId));
+  const isDownvoted = Boolean(post?.downvotedBy && post.downvotedBy.includes(currentUserId));
+  const isSaved = Boolean(post && savedPostIds.includes(post.id));
+
   const handleShare = () => {
     navigator.clipboard?.writeText(window.location.href);
     setIsCopied(true);
@@ -179,9 +189,22 @@ export default function CommunityDetailPage() {
     setPost(prev => ({
       ...prev,
       upvotes: result.upvotes,
-      upvotedBy: result.hasUpvoted
-        ? [...(prev.upvotedBy || []), currentUser.uid || currentUser.id]
-        : (prev.upvotedBy || []).filter(u => u !== (currentUser.uid || currentUser.id))
+      upvotedBy: result.upvotedBy,
+      downvotedBy: result.downvotedBy
+    }));
+  };
+
+  const handleDownvote = async () => {
+    if (!currentUser) {
+      setShowAuthModal(true);
+      return;
+    }
+    const result = await handleDownvotePost(post.id);
+    setPost(prev => ({
+      ...prev,
+      upvotes: result.upvotes,
+      upvotedBy: result.upvotedBy,
+      downvotedBy: result.downvotedBy
     }));
   };
 
@@ -190,8 +213,7 @@ export default function CommunityDetailPage() {
       setShowAuthModal(true);
       return;
     }
-    const userId = currentUser.uid || currentUser.id;
-    const res = await communityService.toggleUpvoteAnswer(pId, aId, userId);
+    const res = await handleUpvoteAnswer(pId, aId);
     setPost(prev => ({
       ...prev,
       answers: (prev.answers || []).map(a => {
@@ -199,9 +221,30 @@ export default function CommunityDetailPage() {
           return {
             ...a,
             upvotes: res.upvotes,
-            upvotedBy: res.hasUpvoted
-              ? [...(a.upvotedBy || []), userId]
-              : (a.upvotedBy || []).filter(u => u !== userId)
+            upvotedBy: res.upvotedBy,
+            downvotedBy: res.downvotedBy
+          };
+        }
+        return a;
+      })
+    }));
+  };
+
+  const handleAnswerDownvote = async (pId, aId) => {
+    if (!currentUser) {
+      setShowAuthModal(true);
+      return;
+    }
+    const res = await handleDownvoteAnswer(pId, aId);
+    setPost(prev => ({
+      ...prev,
+      answers: (prev.answers || []).map(a => {
+        if (a.id === aId) {
+          return {
+            ...a,
+            upvotes: res.upvotes,
+            upvotedBy: res.upvotedBy,
+            downvotedBy: res.downvotedBy
           };
         }
         return a;
@@ -321,9 +364,7 @@ export default function CommunityDetailPage() {
     );
   }
 
-  const isSaved = savedPostIds.includes(post.id);
   const isSolved = post.status === 'solved' || post.isAccepted;
-  const isUpvoted = (post.upvotedBy || []).includes(currentUser?.uid || currentUser?.id) || post.upvotes > 0;
   const diffConfig = DIFFICULTY_LEVELS.find(d => d.id === post.difficulty) || DIFFICULTY_LEVELS[1];
 
   // Sort answers
@@ -396,7 +437,7 @@ export default function CommunityDetailPage() {
                   type="button"
                   className={`se-vote-btn up ${isUpvoted ? 'is-active' : ''}`}
                   onClick={handleUpvote}
-                  title="This question shows research effort; it is useful and clear"
+                  title="Bài toán có nghiên cứu, rõ ràng và hữu ích"
                   aria-label="Upvote question"
                 >
                   <ChevronUp size={28} />
@@ -406,9 +447,9 @@ export default function CommunityDetailPage() {
 
                 <button
                   type="button"
-                  className={`se-vote-btn down ${!isUpvoted && post.upvotes < 0 ? 'is-active' : ''}`}
-                  onClick={handleUpvote}
-                  title="This question does not show any research effort"
+                  className={`se-vote-btn down ${isDownvoted ? 'is-active' : ''}`}
+                  onClick={handleDownvote}
+                  title="Bài toán chưa rõ ràng hoặc thiếu thông tin"
                   aria-label="Downvote question"
                 >
                   <ChevronDown size={28} />
@@ -418,7 +459,7 @@ export default function CommunityDetailPage() {
                   type="button"
                   className={`se-vote-btn bookmark ${isSaved ? 'is-saved' : ''}`}
                   onClick={() => toggleSavePost(post.id)}
-                  title={isSaved ? 'Remove from saved' : 'Save this question'}
+                  title={isSaved ? 'Bỏ lưu bài toán' : 'Lưu bài toán này'}
                   aria-label="Save question"
                 >
                   <Bookmark size={18} fill={isSaved ? 'currentColor' : 'none'} />
@@ -564,6 +605,7 @@ export default function CommunityDetailPage() {
                       currentUser={currentUser}
                       onRequireLogin={() => setShowAuthModal(true)}
                       onUpvote={handleAnswerUpvote}
+                      onDownvote={handleAnswerDownvote}
                       onAcceptAnswer={handleAnswerAccept}
                       onAddComment={handleAnswerComment}
                       onEditComment={handleEditAnswerComment}

@@ -988,7 +988,7 @@ class CommunityService {
     return { post: normalizePost(post) };
   }
 
-  toggleUpvoteAnswer(postId, answerId, userId = 'current-user') {
+  voteAnswer(postId, answerId, userId = 'guest', voteType = 'up') {
     const posts = this.getPostsFromStorage();
     const pIdx = posts.findIndex(p => p.id === postId);
     if (pIdx === -1) throw new Error('Không tìm thấy bài viết');
@@ -999,21 +999,74 @@ class CommunityService {
 
     const answer = post.answers[aIdx];
     const upvotedBy = answer.upvotedBy || [];
-    const hasUpvoted = upvotedBy.includes(userId);
+    const downvotedBy = answer.downvotedBy || [];
 
-    if (hasUpvoted) {
-      answer.upvotedBy = upvotedBy.filter(id => id !== userId);
-      answer.upvotes = Math.max(0, (answer.upvotes || 1) - 1);
-    } else {
-      answer.upvotedBy = [...upvotedBy, userId];
-      answer.upvotes = (answer.upvotes || 0) + 1;
+    const hasUpvoted = upvotedBy.includes(userId);
+    const hasDownvoted = downvotedBy.includes(userId);
+
+    let nextUpvotes = answer.upvotes || 0;
+    let nextUpvotedBy = [...upvotedBy];
+    let nextDownvotedBy = [...downvotedBy];
+    let userVote = 0; // 1 = upvoted, -1 = downvoted, 0 = none
+
+    if (voteType === 'up') {
+      if (hasUpvoted) {
+        // Toggle off upvote
+        nextUpvotedBy = nextUpvotedBy.filter(id => id !== userId);
+        nextUpvotes = Math.max(0, nextUpvotes - 1);
+        userVote = 0;
+      } else {
+        // Add upvote, remove downvote if present
+        if (hasDownvoted) {
+          nextDownvotedBy = nextDownvotedBy.filter(id => id !== userId);
+          nextUpvotes += 1;
+        }
+        nextUpvotedBy.push(userId);
+        nextUpvotes += 1;
+        userVote = 1;
+      }
+    } else if (voteType === 'down') {
+      if (hasDownvoted) {
+        // Toggle off downvote
+        nextDownvotedBy = nextDownvotedBy.filter(id => id !== userId);
+        nextUpvotes += 1;
+        userVote = 0;
+      } else {
+        // Add downvote, remove upvote if present
+        if (hasUpvoted) {
+          nextUpvotedBy = nextUpvotedBy.filter(id => id !== userId);
+          nextUpvotes = Math.max(0, nextUpvotes - 1);
+        }
+        nextDownvotedBy.push(userId);
+        nextUpvotes = Math.max(0, nextUpvotes - 1);
+        userVote = -1;
+      }
     }
+
+    answer.upvotes = nextUpvotes;
+    answer.upvotedBy = nextUpvotedBy;
+    answer.downvotedBy = nextDownvotedBy;
 
     post.answers[aIdx] = answer;
     posts[pIdx] = post;
     this.savePostsToStorage(posts);
 
-    return { upvotes: answer.upvotes, hasUpvoted: !hasUpvoted };
+    return {
+      upvotes: answer.upvotes,
+      upvotedBy: nextUpvotedBy,
+      downvotedBy: nextDownvotedBy,
+      userVote,
+      hasUpvoted: userVote === 1,
+      hasDownvoted: userVote === -1
+    };
+  }
+
+  toggleUpvoteAnswer(postId, answerId, userId = 'guest') {
+    return this.voteAnswer(postId, answerId, userId, 'up');
+  }
+
+  toggleDownvoteAnswer(postId, answerId, userId = 'guest') {
+    return this.voteAnswer(postId, answerId, userId, 'down');
   }
 
   acceptAnswer(postId, answerId, isInstructor = false) {
@@ -1169,8 +1222,80 @@ class CommunityService {
     return this.getCommunityStats();
   }
 
-  toggleUpvotePost(postId, userId = 'current-user') {
-    return this.toggleUpvote(postId, userId);
+  votePost(postId, userId = 'guest', voteType = 'up') {
+    const posts = this.getPostsFromStorage();
+    const pIdx = posts.findIndex(p => p.id === postId);
+    if (pIdx === -1) throw new Error('Không tìm thấy bài viết');
+
+    const post = posts[pIdx];
+    const upvotedBy = post.upvotedBy || [];
+    const downvotedBy = post.downvotedBy || [];
+
+    const hasUpvoted = upvotedBy.includes(userId);
+    const hasDownvoted = downvotedBy.includes(userId);
+
+    let nextUpvotes = post.upvotes || 0;
+    let nextUpvotedBy = [...upvotedBy];
+    let nextDownvotedBy = [...downvotedBy];
+    let userVote = 0; // 1 = upvoted, -1 = downvoted, 0 = none
+
+    if (voteType === 'up') {
+      if (hasUpvoted) {
+        // Toggle off upvote
+        nextUpvotedBy = nextUpvotedBy.filter(id => id !== userId);
+        nextUpvotes = Math.max(0, nextUpvotes - 1);
+        userVote = 0;
+      } else {
+        // Add upvote, remove downvote if present
+        if (hasDownvoted) {
+          nextDownvotedBy = nextDownvotedBy.filter(id => id !== userId);
+          nextUpvotes += 1;
+        }
+        nextUpvotedBy.push(userId);
+        nextUpvotes += 1;
+        userVote = 1;
+      }
+    } else if (voteType === 'down') {
+      if (hasDownvoted) {
+        // Toggle off downvote
+        nextDownvotedBy = nextDownvotedBy.filter(id => id !== userId);
+        nextUpvotes += 1;
+        userVote = 0;
+      } else {
+        // Add downvote, remove upvote if present
+        if (hasUpvoted) {
+          nextUpvotedBy = nextUpvotedBy.filter(id => id !== userId);
+          nextUpvotes = Math.max(0, nextUpvotes - 1);
+        }
+        nextDownvotedBy.push(userId);
+        nextUpvotes = Math.max(0, nextUpvotes - 1);
+        userVote = -1;
+      }
+    }
+
+    post.upvotes = nextUpvotes;
+    post.upvotedBy = nextUpvotedBy;
+    post.downvotedBy = nextDownvotedBy;
+
+    posts[pIdx] = post;
+    this.savePostsToStorage(posts);
+
+    return {
+      upvotes: post.upvotes,
+      upvotedBy: nextUpvotedBy,
+      downvotedBy: nextDownvotedBy,
+      userVote,
+      hasUpvoted: userVote === 1,
+      hasDownvoted: userVote === -1
+    };
+  }
+
+  toggleUpvotePost(postId, userId = 'guest') {
+    return this.votePost(postId, userId, 'up');
+  }
+
+  toggleDownvotePost(postId, userId = 'guest') {
+    return this.votePost(postId, userId, 'down');
   }
 
   getTrendingTags() {

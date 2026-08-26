@@ -39,6 +39,7 @@ export default function AnswerCard({
   currentUser = null,
   onRequireLogin,
   onUpvote,
+  onDownvote,
   onAcceptAnswer,
   onAddComment,
   onEditComment,
@@ -91,9 +92,11 @@ export default function AnswerCard({
   };
 
   const isAccepted = Boolean(answer.isAccepted);
+  const currentUserId = currentUser?.uid || currentUser?.id || '';
   const isVerified = Boolean(answer.instructorVerified || answer.isInstructorVerified);
   const isAnswerAuthor = currentUser && (currentUser.uid === answer.author?.id || currentUser.id === answer.author?.id);
-  const hasUpvoted = (answer.upvotedBy || []).includes(currentUser?.uid || currentUser?.id || 'guest') || (answer.upvotes > 0);
+  const hasUpvoted = Boolean(currentUserId && answer.upvotedBy && answer.upvotedBy.includes(currentUserId));
+  const hasDownvoted = Boolean(currentUserId && answer.downvotedBy && answer.downvotedBy.includes(currentUserId));
 
   const handleShareLink = () => {
     const url = `${window.location.origin}/community/${postId}#${answer.id}`;
@@ -190,7 +193,13 @@ export default function AnswerCard({
         <button
           type="button"
           className={`se-vote-btn up ${hasUpvoted ? 'is-active' : ''}`}
-          onClick={() => onUpvote(postId, answer.id)}
+          onClick={() => {
+            if (!currentUser) {
+              onRequireLogin?.();
+              return;
+            }
+            onUpvote?.(postId, answer.id);
+          }}
           title="Lời giải này hữu ích và chuẩn xác"
           aria-label="Upvote answer"
         >
@@ -201,9 +210,15 @@ export default function AnswerCard({
 
         <button
           type="button"
-          className="se-vote-btn down"
-          onClick={() => onUpvote(postId, answer.id)}
-          title="Lời giải chưa hữu ích"
+          className={`se-vote-btn down ${hasDownvoted ? 'is-active' : ''}`}
+          onClick={() => {
+            if (!currentUser) {
+              onRequireLogin?.();
+              return;
+            }
+            onDownvote?.(postId, answer.id);
+          }}
+          title="Lời giải chưa hữu ích hoặc không chính xác"
           aria-label="Downvote answer"
         >
           <ChevronDown size={28} />
