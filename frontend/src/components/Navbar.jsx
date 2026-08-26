@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import NotificationDropdown from './community/NotificationDropdown';
 import { apiFetch, readApiJson, toClientUser } from '../utils/apiClient';
+import { getInitials } from '../utils/userInitials';
 import '../assets/styles/Navbar.css';
 import {
   auth,
@@ -239,25 +240,42 @@ export default function Navbar() {
 
     const bootstrapSession = async () => {
       try {
-        const savedUser = localStorage.getItem('ueh_tcc_user');
-        if (savedUser) {
-          if (!cancelled) {
-            hasBackendSessionRef.current = true;
-            setLoggedInUser(JSON.parse(savedUser));
-          }
-        } else {
-          if (!cancelled) {
-            hasBackendSessionRef.current = false;
-            setLoggedInUser(null);
+        const res = await apiFetch('/api/auth/me');
+        if (res.ok) {
+          const payload = await readApiJson(res);
+          if (payload?.user) {
+            const clientUser = toClientUser(payload.user);
+            if (!cancelled) {
+              hasBackendSessionRef.current = true;
+              setLoggedInUser(clientUser);
+              localStorage.setItem('ueh_tcc_user', JSON.stringify(clientUser));
+            }
+            return;
           }
         }
-      } catch {
         if (!cancelled) {
           hasBackendSessionRef.current = false;
           setLoggedInUser(null);
         }
         localStorage.removeItem('ueh_tcc_user');
         localStorage.removeItem('ueh_tcc_token');
+      } catch (err) {
+        if (err.status === 401) {
+          if (!cancelled) {
+            hasBackendSessionRef.current = false;
+            setLoggedInUser(null);
+          }
+          localStorage.removeItem('ueh_tcc_user');
+          localStorage.removeItem('ueh_tcc_token');
+        } else {
+          const savedUser = localStorage.getItem('ueh_tcc_user');
+          if (savedUser && !cancelled) {
+            try {
+              setLoggedInUser(JSON.parse(savedUser));
+              hasBackendSessionRef.current = true;
+            } catch {}
+          }
+        }
       } finally {
         if (!cancelled) setSessionReady(true);
       }
@@ -938,7 +956,7 @@ export default function Navbar() {
                           style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
                         />
                       ) : (
-                        <span>{(loggedInUser.name || loggedInUser.username || 'U').trim().charAt(0).toUpperCase()}</span>
+                        <span>{getInitials(loggedInUser.name || loggedInUser.username)}</span>
                       )}
                     </div>
                     <span className="user-profile-name-text">{loggedInUser.name}</span>
@@ -956,7 +974,7 @@ export default function Navbar() {
                               style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
                             />
                           ) : (
-                            <span>{(loggedInUser.name || loggedInUser.username || 'U').trim().charAt(0).toUpperCase()}</span>
+                            <span>{getInitials(loggedInUser.name || loggedInUser.username)}</span>
                           )}
                         </div>
                         <div className="dropdown-user-info">

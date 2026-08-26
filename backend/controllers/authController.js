@@ -379,7 +379,8 @@ export const resetPassword = async (req, res) => {
 };
 
 export const updateProfile = async (req, res) => {
-  const { username, name, phoneNumber, avatar, school, bio } = req.body;
+  const { name, phoneNumber, avatar, school, bio } = req.body;
+  const username = req.body.username || req.authUser?.username || req.authUser?.email;
 
   if (!username) {
     return res.status(400).json({ success: false, message: 'Username/Email không hợp lệ!' });

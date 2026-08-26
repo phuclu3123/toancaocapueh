@@ -25,6 +25,7 @@ import MathRenderer from '../MathRenderer';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import WYSIWYGMathEditor from './WYSIWYGMathEditor';
 import { formatRelativeTime } from '../../services/communityService';
+import { getInitials } from '../../utils/userInitials';
 import '../../assets/styles/community.css';
 
 /**

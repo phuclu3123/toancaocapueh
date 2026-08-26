@@ -20,21 +20,10 @@ import {
   isFirebaseConfigured,
   signOut as firebaseSignOut
 } from '../firebase';
+import { getInitials } from '../utils/userInitials';
 import '../assets/styles/ProfilePage.css';
 
 const DEFAULT_SCHOOL = 'Đại học Kinh tế TP.HCM (UEH)';
-
-const getInitials = (value = '') => {
-  const initials = value
-    .trim()
-    .split(/\s+/)
-    .slice(-2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
-
-  return initials || 'HV';
-};
 
 export default function ProfilePage() {
   const location = useLocation();
@@ -62,6 +51,9 @@ export default function ProfilePage() {
   const applySession = useCallback((payload) => {
     const sessionUser = toClientUser(payload.user);
     setUser(sessionUser);
+    if (sessionUser) {
+      localStorage.setItem('ueh_tcc_user', JSON.stringify(sessionUser));
+    }
     setEnrollments(Array.isArray(payload.enrollments) ? payload.enrollments : []);
     setName(sessionUser?.name || '');
     setPhoneNumber(sessionUser?.phoneNumber || '');
@@ -129,6 +121,7 @@ export default function ProfilePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          username: user?.username || user?.email,
           name,
           phoneNumber,
           school,
@@ -146,7 +139,9 @@ export default function ProfilePage() {
         bio
       });
       setUser(updatedUser);
-      setStatusMsg({ type: 'success', text: 'Thông tin cá nhân đã được cập nhật.' });
+      localStorage.setItem('ueh_tcc_user', JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event('ueh-tcc-session-changed'));
+      setStatusMsg({ type: 'success', text: 'Thông tin cá nhân đã được cập nhật thành công!' });
     } catch (error) {
       setStatusMsg({
         type: 'error',

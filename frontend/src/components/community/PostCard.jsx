@@ -12,6 +12,7 @@ import MathRenderer from '../MathRenderer';
 import UserRankBadge from './UserRankBadge';
 import PostActionsMenu from './PostActionsMenu';
 import { formatRelativeTime, DIFFICULTY_LEVELS } from '../../services/communityService';
+import { getInitials } from '../../utils/userInitials';
 import '../../assets/styles/community.css';
 
 // Safely extract text snippet without breaking KaTeX $$ or $ math delimiters
@@ -261,7 +262,7 @@ export default function PostCard({
                   />
                 ) : (
                   <span className="se-user-avatar-fallback">
-                    {(post.author?.name || 'U').charAt(0).toUpperCase()}
+                    {getInitials(post.author?.name || 'U')}
                   </span>
                 )}
               </Link>

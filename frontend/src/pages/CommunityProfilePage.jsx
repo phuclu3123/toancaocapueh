@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Settings
 } from 'lucide-react';
+import { getInitials } from '../utils/userInitials';
 import { useAuth } from '../contexts/AuthContext';
 import { useCommunity } from '../contexts/CommunityContext';
 import { getTierProgress, getTierByPoints, SPECIALTY_BADGES, BADGE_CATEGORIES } from '../services/reputationService';
@@ -260,7 +261,7 @@ export default function CommunityProfilePage({ defaultTab = 'posts' }) {
                     <img src={profile.avatar} alt={profile.name} className="qa-profile-avatar-img" />
                   ) : (
                     <span className="qa-profile-avatar-initial">
-                      {(profile?.name || 'U').charAt(0).toUpperCase()}
+                      {getInitials(profile?.name || 'U')}
                     </span>
                   )}
                 </div>
